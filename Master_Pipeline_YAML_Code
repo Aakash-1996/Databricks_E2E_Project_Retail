@@ -1,0 +1,65 @@
+resources:
+  jobs:
+    Pipeline:
+      name: Pipeline
+      tasks:
+        - task_key: Master_parameter
+          notebook_task:
+            notebook_path: /Workspace/Users/aakash.ss@merkle.com/parameter_setup
+            source: WORKSPACE
+        - task_key: Bronze_Ingestion
+          depends_on:
+            - task_key: Master_parameter
+          for_each_task:
+            inputs: "{{tasks.Master_parameter.values.File_param}}"
+            task:
+              task_key: Bronze_Ingestion_iteration
+              notebook_task:
+                notebook_path: /Workspace/Users/aakash.ss@merkle.com/Bronze_Layer
+                base_parameters:
+                  data: "{{input.file_name}}"
+                source: WORKSPACE
+        - task_key: Silver_Customer
+          depends_on:
+            - task_key: Bronze_Ingestion
+          notebook_task:
+            notebook_path: /Workspace/Users/aakash.ss@merkle.com/Silver_Customers
+            source: WORKSPACE
+        - task_key: Silver_Orders
+          depends_on:
+            - task_key: Bronze_Ingestion
+          notebook_task:
+            notebook_path: /Workspace/Users/aakash.ss@merkle.com/Silver_Orders
+            source: WORKSPACE
+        - task_key: Silver_Products
+          depends_on:
+            - task_key: Bronze_Ingestion
+          notebook_task:
+            notebook_path: /Workspace/Users/aakash.ss@merkle.com/Silver_Products
+            source: WORKSPACE
+        - task_key: Gold_Customers_Dim
+          depends_on:
+            - task_key: Silver_Customer
+            - task_key: Silver_Orders
+            - task_key: Silver_Products
+          notebook_task:
+            notebook_path: /Workspace/Users/aakash.ss@merkle.com/Gold_Customers
+            source: WORKSPACE
+        - task_key: Gold_Products_Dim
+          depends_on:
+            - task_key: Silver_Customer
+            - task_key: Silver_Products
+            - task_key: Silver_Orders
+          pipeline_task:
+            pipeline_id: 797c8396-95ae-4499-96b7-8e1a90dffc60
+            full_refresh: false
+        - task_key: Gold_Orders_fact
+          depends_on:
+            - task_key: Gold_Products_Dim
+            - task_key: Gold_Customers_Dim
+          notebook_task:
+            notebook_path: /Workspace/Users/aakash.ss@merkle.com/Gold_Fact
+            source: WORKSPACE
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
